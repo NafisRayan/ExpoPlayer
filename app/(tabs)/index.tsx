@@ -1,10 +1,19 @@
-// Import necessary modules
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useState } from 'react';
 import { Audio } from 'expo-av';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Dimensions } from 'react-native';
+
+// Get the window width and height
+const windowWidth = Dimensions.get('window').width;
+const windowHeight = Dimensions.get('window').height;
+
+// Calculate padding and margin values based on window dimensions
+const basePadding = 5; // Base padding value
+const horizontalMargin = windowWidth > 360 ? basePadding * 2 : basePadding; // Adjust margin for larger screens
+const verticalMargin = windowHeight > 700 ? basePadding * 8 : basePadding; // Adjust margin for taller screens
 
 export default function App() {
   // State variables
@@ -16,10 +25,12 @@ export default function App() {
   // Function to fetch music files from the device's media library
   const fetchMusicFiles = async () => {
     const permission = await MediaLibrary.requestPermissionsAsync();
-    const media = await MediaLibrary.getAssetsAsync({
-      mediaType: MediaLibrary.MediaType.audio,
-    });
-    setMusicFiles(media.assets);
+    if (permission.granted) {
+      const media = await MediaLibrary.getAssetsAsync({
+        mediaType: MediaLibrary.MediaType.audio,
+      });
+      setMusicFiles(media.assets);
+    }
   };
 
   // Function to play a selected music file
@@ -31,7 +42,9 @@ export default function App() {
 
   // Function to pause the currently playing music
   const pauseMusic = async () => {
-    await sound.pauseAsync();
+    if (sound) {
+      await sound.pauseAsync();
+    }
   };
 
   // Effect hook to fetch music files when the component mounts
@@ -61,66 +74,75 @@ export default function App() {
     <View style={styles.container}>
       <StatusBar style="auto" />
       <Text style={styles.heading}>Welcome to ExpoPlayer</Text>
-      <View style={styles.list}>
-        {musicFiles.map((file, index) => (
-          <View key={index}>
-            <TouchableOpacity onPress={() => {
-              if (playing !== index) {
-                playMusic(file.uri);
-                setPlaying(index);
-              } else {
-                pauseMusic();
-                setPlaying(-1);
-              }
-            }} style={styles.playButton}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Ionicons name={playing !== index ? "play" : "pause"} size={30} color="white" />
-                <Text style={styles.fileName}>{file.filename}</Text>
-              </View>
-              {playing === index && (
-                <View style={styles.row}>
-                  <Text style={styles.fileName}>{progressDuration.toFixed(2)} / {file.duration}</Text>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.list}>
+          {musicFiles.map((file, index) => (
+            <View key={index}>
+              <TouchableOpacity onPress={() => {
+                if (playing !== index) {
+                  playMusic(file.uri);
+                  setPlaying(index);
+                } else {
+                  pauseMusic();
+                  setPlaying(-1);
+                }
+              }} style={styles.playButton}>
+                <View style={styles.playButtonContent}>
+                  <Ionicons name={playing !== index ? "play" : "pause"} size={30} color="white" />
+                  <Text style={styles.fileName}>{file.filename}</Text>
                 </View>
-              )}
-            </TouchableOpacity>
-          </View>
-        ))}
-      </View>
+                {playing === index && (
+                  <View style={styles.row}>
+                    <Text style={styles.fileName}>{progressDuration.toFixed(2)} / {file.duration}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
 // Define styles
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-  },
   container: {
+    flex: 1, // Allow container to take up full available space
     backgroundColor: "#fff",
-    height: "100%",
-    marginTop: 50,
+    paddingTop: verticalMargin, // Adjust top padding for status bar
   },
   heading: {
     color: "blue",
     fontSize: 30,
     textAlign: "center",
     fontWeight: "bold",
+    paddingHorizontal: horizontalMargin, // Apply horizontal padding
+    marginBottom: verticalMargin, // Add margin below heading
+  },
+  scrollContainer: {
+    flexGrow: 1, // Ensure the ScrollView can grow to fit content
   },
   list: {
-    marginTop: 20,
-    flex: 1,
     flexDirection: "column",
+    paddingHorizontal: horizontalMargin, // Add horizontal padding to list
   },
   fileName: {
     fontSize: 18,
     color: "white",
     fontWeight: 'bold',
+    paddingHorizontal: horizontalMargin, // Apply horizontal padding
   },
   playButton: {
     backgroundColor: 'gray',
     borderRadius: 50,
-    padding: 10,
-    margin: 10,
+    padding: basePadding,
+    marginVertical: basePadding, // Add vertical margin for spacing between items
+    marginHorizontal: horizontalMargin, // Apply horizontal margin
+  },
+  playButtonContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 });
